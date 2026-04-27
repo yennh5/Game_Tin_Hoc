@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ôn tập Tin học lớp 4 - Cùng Muống học vui!</title>
+    
+    <!-- Nhúng Tailwind CSS để hỗ trợ Responsive và Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Nhúng Font chữ dễ thương cho trẻ em -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Cấu hình màu sắc tùy chỉnh bằng Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        kidYellow: '#fef08a',
+                        kidGreen: '#bbf7d0',
+                        kidBlue: '#bae6fd',
+                        kidPink: '#fbcfe8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #fef08a 0%, #bbf7d0 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Quicksand', sans-serif;
+            color: #334155;
+        }
+
+        /* Hiệu ứng nảy cho nút bấm */
+        .btn-bounce {
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s;
+        }
+        .btn-bounce:active:not(:disabled) {
+            transform: scale(0.95) translateY(4px);
+            box-shadow: 0 0px 0px rgba(0,0,0,0.2) !important;
+        }
+
+        /* 3D Flashcard */
+        .scene {
+            perspective: 1000px;
+            width: 100%;
+            min-height: 250px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            min-height: 250px;
+            position: relative;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card__face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 4px solid white;
+        }
+        .card__face--front {
+            background: #bae6fd;
+        }
+        .card__face--back {
+            background: #fbcfe8;
+            transform: rotateY(180deg);
+        }
+
+        /* Pháo giấy Confetti */
+        .confetti {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            top: -20px;
+            z-index: 50;
+            border-radius: 2px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Hoạt ảnh kết quả */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center py-8">
+
+    <div id="game-container" class="w-full max-w-2xl px-4 flex flex-col items-center w-full">
+        <!-- Màn hình chào mừng -->
+        <div id="start-screen" class="bg-white p-8 rounded-[2rem] shadow-2xl text-center border-8 border-white pop-in w-full">
+            <h1 class="text-4xl md:text-5xl font-black text-blue-500 mb-6 drop-shadow-md">🎮 Ôn Tập Tin Học Lớp 4</h1>
+            <p class="text-xl md:text-2xl text-gray-600 mb-8 font-bold">Chào Muống! Cùng bắt đầu ôn tập nào!</p>
+            <button onclick="startGame()" class="btn-bounce bg-green-400 text-white font-black text-2xl py-4 px-10 rounded-full shadow-[0_8px_0_#16a34a] hover:bg-green-500 w-full md:w-auto">
+                BẮT ĐẦU CHƠI 🚀
+            </button>
+        </div>
+
+        <!-- Màn hình chơi chính -->
+        <div id="play-screen" class="hidden w-full">
+            <!-- Thanh tiến trình -->
+            <div class="flex items-center justify-between mb-4 bg-white/50 py-2 px-4 rounded-2xl">
+                <span class="font-bold text-gray-600 text-lg">Câu <span id="current-q-num">1</span>/<span id="total-q-num">17</span></span>
+                <span class="font-bold text-blue-600 text-lg">Điểm: <span id="score-display">0</span>⭐</span>
+            </div>
+            <div class="w-full bg-white/50 rounded-full h-4 mb-6 shadow-inner overflow-hidden border-2 border-white">
+                <div id="progress-bar" class="bg-blue-400 h-full rounded-full transition-all duration-500 w-0"></div>
+            </div>
+
+            <!-- Khung câu hỏi -->
+            <div id="question-card" class="bg-white p-6 md:p-8 rounded-[2rem] shadow-xl border-4 border-white mb-6 relative">
+                <h2 id="question-text" class="text-2xl md:text-3xl font-bold text-gray-800 leading-snug mb-6">Nội dung câu hỏi</h2>
+                
+                <!-- Khu vực đáp án (Trắc nghiệm hoặc Nhập từ) -->
+                <div id="options-container" class="flex flex-col gap-4"></div>
+
+                <!-- Khu vực Flashcard -->
+                <div id="flashcard-container" class="hidden scene mb-6">
+                    <div id="flashcard" class="card" onclick="flipCard()">
+                        <div class="card__face card__face--front">
+                            <p class="text-xl md:text-2xl font-bold text-blue-800 text-center">Chạm để lật xem đáp án!</p>
+                        </div>
+                        <div class="card__face card__face--back">
+                            <p id="flashcard-answer" class="text-xl md:text-2xl font-bold text-pink-800 text-center leading-snug"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phản hồi đúng/sai -->
+            <div id="feedback-box" class="hidden text-center p-4 rounded-2xl mb-6 font-bold text-xl md:text-2xl border-4"></div>
+
+            <!-- Nút điều hướng -->
+            <div class="text-center">
+                <button id="check-btn" class="hidden btn-bounce bg-blue-500 text-white font-black text-xl py-3 px-8 rounded-full shadow-[0_6px_0_#2563eb] hover:bg-blue-600 mx-auto" onclick="checkInputAnswer()">Kiểm tra</button>
+                <button id="next-btn" class="hidden btn-bounce bg-yellow-400 text-yellow-900 font-black text-2xl py-4 px-10 rounded-full shadow-[0_8px_0_#ca8a04] hover:bg-yellow-500 mx-auto w-full md:w-auto" onclick="nextQuestion()">ĐI TIẾP ➔</button>
+            </div>
+        </div>
+
+        <!-- Màn hình kết thúc -->
+        <div id="end-screen" class="hidden bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl text-center border-8 border-white w-full">
+            <div class="text-6xl mb-6">🏆</div>
+            <h1 class="text-4xl md:text-6xl font-black text-red-500 mb-6 drop-shadow-md leading-tight">Chúc mừng Muống đã hoàn thành xuất sắc bài ôn tập!</h1>
+            <p class="text-2xl md:text-3xl font-bold text-gray-700 mb-8">Số điểm của em là: <span id="final-score" class="text-blue-500 text-5xl"></span> ⭐</p>
+            <button onclick="location.reload()" class="btn-bounce bg-green-400 text-white font-black text-2xl py-4 px-10 rounded-full shadow-[0_8px_0_#16a34a] hover:bg-green-500">
+                CHƠI LẠI TỪ ĐẦU 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- BỘ DỮ LIỆU CÂU HỎI ---
+        const questions = [
+            {
+                type: 'mc',
+                question: 'Câu 1: Để tạo hiệu ứng cho tranh ảnh trong trang trình chiếu em chọn thẻ?',
+                options: ['A. Design', 'B. Transitions', 'C. Animations', 'D. Slide Show'],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: `Câu 2: Em hãy cho biết bảng dưới đây gồm mấy hàng và mấy cột?<br><br>
+                <div class="overflow-x-auto rounded-xl border-2 border-gray-200">
+                    <table class="w-full text-lg text-center bg-gray-50 rounded-xl overflow-hidden">
+                        <tr class="bg-blue-100 text-blue-800">
+                            <th class="p-3 border">Môn</th>
+                            <th class="p-3 border">Toán</th>
+                            <th class="p-3 border">Tiếng Việt</th>
+                            <th class="p-3 border">Tin học</th>
+                        </tr>
+                        <tr class="text-gray-700">
+                            <td class="p-3 border font-bold">Điểm</td>
+                            <td class="p-3 border">10</td>
+                            <td class="p-3 border">9</td>
+                            <td class="p-3 border">9</td>
+                        </tr>
+                    </table>
+                </div>`,
+                options: ['A. 2 hàng, 4 cột', 'B. 2 hàng, 2 cột', 'C. 4 hàng, 4 cột', 'D. 4 hàng, 2 cột'],
+                correctIndex: 0
+            },
+            {
+                type: 'mc',
+                question: 'Câu 3: Để chèn bảng vào trang soạn thảo em thực hiện?',
+                options: ['A. Vào thẻ Insert / chọn Table', 'B. Vào thẻ Insert / chọn Chart', 'C. Vào thẻ Insert / chọn Picture', 'D. Vào thẻ Insert / chọn Shapes'],
+                correctIndex: 0
+            },
+            {
+                type: 'mc',
+                question: 'Câu 4: Chèn ảnh vào văn bản bằng các lệnh:',
+                options: ['A. Vào thẻ Insert / chọn Table', 'B. Vào thẻ Insert / chọn Chart', 'C. Vào thẻ Insert / chọn Picture', 'D. Vào thẻ Insert / chọn Shapes'],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: 'Câu 5: Đâu là biểu tượng của phần mềm trình chiếu (PowerPoint)?',
+                options: ['A. Biểu tượng chữ W màu xanh', 'B. Biểu tượng chữ X màu xanh lá', 'C. Biểu tượng chữ P màu cam', 'D. Biểu tượng con cáo'],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: 'Câu 6: Tổ hợp phím hoặc nhóm lệnh nào dùng để sao chép khối văn bản?',
+                options: ['A. Cut, Copy, Delete', 'B. Cut, Copy, Paste', 'C. Home, Cut, Copy'],
+                correctIndex: 1
+            },
+            {
+                type: 'mc',
+                question: 'Câu 7: Trong phần mềm PowerPoint để lưu bài trình chiếu mới em nhấn tổ hợp phím nào:',
+                options: ['A. Ctrl + B', 'B. Ctrl + I', 'C. Ctrl + U', 'D. Ctrl + S'],
+                correctIndex: 3
+            },
+            {
+                type: 'mc',
+                question: 'Câu 8: Trong phần mềm PowerPoint để bắt đầu trình chiếu em nhấn phím nào?',
+                options: ['A. F7', 'B. F6', 'C. F5', 'D. F4'],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: 'Câu 9: Trong chương trình Scratch lệnh "Đợi 2 giây" (Wait 2 seconds) có ý nghĩa gì?',
+                options: [
+                    'A. Dừng chương trình lại 2 giây sau khi thực hiện lệnh tiếp theo',
+                    'B. Dừng chương trình lại 2 giây trước khi thực hiện lệnh tiếp theo',
+                    'C. Làm xuất hiện nhân vật',
+                    'D. Làm ẩn nhân vật'
+                ],
+                correctIndex: 1
+            },
+            {
+                type: 'mc',
+                question: 'Câu 10: Để gõ được tiếng Việt trên máy tính, em cần phần mềm hỗ trợ nào?',
+                options: ['A. Unikey', 'B. Vietkey', 'C. Evkey', 'D. Tất cả các đáp án trên đều đúng'],
+                correctIndex: 3
+            },
+            {
+                type: 'mc',
+                question: 'Câu 11: Scratch là gì?',
+                options: ['A. Là tên gọi của một loại ngôn ngữ lập trình', 'B. Một phần mềm game', 'C. Một phần mềm Microsoft', 'D. Một trang web'],
+                correctIndex: 0
+            },
+            {
+                type: 'mc',
+                question: 'Câu 12: Đâu là biểu tượng của phần mềm soạn thảo văn bản (Word)?',
+                options: ['A. Biểu tượng chữ P màu cam', 'B. Biểu tượng chữ W màu xanh dương', 'C. Biểu tượng chữ X màu xanh lá ', 'D. Biểu tượng trình duyệt'],
+                correctIndex: 1
+            },
+            {
+                type: 'mc',
+                question: 'Câu 13.1: Tổ hợp phím tắt nào tương ứng với Save là gì?',
+                options: [
+                    'A. Ctrl+O',
+                    'B. Ctrl+S',
+                    'C. Ctrl+C',
+					'D. Ctrl+N'
+					
+                ],
+                correctIndex: 1
+            },
+            {
+                type: 'mc',
+                question: 'Câu 13.2: Tổ hợp phím tắt nào tương ứng với Open là gì?',
+                options: [
+                    'A. Ctrl+O',
+                    'B. Ctrl+S',
+                    'C. Ctrl+C',
+					'D. Ctrl+N'
+					
+                ],
+                correctIndex: 0
+            },
+            {
+                type: 'mc',
+                question: 'Câu 13.3: Tổ hợp phím tắt nào tương ứng với New là gì?',
+                options: [
+                    'A. Ctrl+O',
+                    'B. Ctrl+S',
+                    'C. Ctrl+C',
+					'D. Ctrl+N'
+					
+                ],
+                correctIndex: 3
+            },
+            {
+                type: 'mc',
+                question: 'Câu 13.4: Tổ hợp phím tắt nào tương ứng với Copy là gì?',
+                options: [
+                    'A. Ctrl+O',
+                    'B. Ctrl+S',
+                    'C. Ctrl+C',
+					'D. Ctrl+N'
+					
+                ],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: 'Câu 14.1. Câu lệnh "Di chuyển 200 bước" trong Scratch có ý nghĩa gì?',
+                options: ['A. Tiến thẳng về phía trước 200 bước.', 'B. Di chuyển trong 1 giây đến vị trí ngẫu nhiên.', 'C. Xoay theo chiều kim đồng hồ (xoay phải) 90 độ.', 'D. Xoay ngược theo chiều kim đồng hồ (xoay trái) 15 độ.'],
+                correctIndex: 0
+            },
+            {
+                type: 'mc',
+                question: 'Câu 14.2. Câu lệnh "Xoay phải 90 độ" trong Scratch có ý nghĩa gì?',
+                options: ['A. Tiến thẳng về phía trước 200 bước.', 'B. Di chuyển trong 1 giây đến vị trí ngẫu nhiên.', 'C. Xoay theo chiều kim đồng hồ (xoay phải) 90 độ.', 'D. Xoay ngược theo chiều kim đồng hồ (xoay trái) 15 độ.'],
+                correctIndex: 2
+            },
+            {
+                type: 'mc',
+                question: 'Câu 14.3. Câu lệnh "Xoay trái 15 độ" trong Scratch có ý nghĩa gì?',
+                options: ['A. Tiến thẳng về phía trước 200 bước.', 'B. Di chuyển trong 1 giây đến vị trí ngẫu nhiên.', 'C. Xoay theo chiều kim đồng hồ (xoay phải) 90 độ.', 'D. Xoay ngược theo chiều kim đồng hồ (xoay trái) 15 độ.'],
+                correctIndex: 3
+            },
+            {
+                type: 'mc',
+                question: 'Câu 14.4. Câu lệnh "Lướt trong 1 giây tới vị trí ngẫu nhiên" trong Scratch có ý nghĩa gì?',
+                options: ['A. Tiến thẳng về phía trước 200 bước.', 'B. Di chuyển trong 1 giây đến vị trí ngẫu nhiên.', 'C. Xoay theo chiều kim đồng hồ (xoay phải) 90 độ.', 'D. Xoay ngược theo chiều kim đồng hồ (xoay trái) 15 độ.'],
+                correctIndex: 1
+            }
+        ];
+
+        // --- TRẠNG THÁI GAME ---
+        let currentIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        // Cài đặt âm thanh (Web Audio API - không cần file ngoài)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'win') {
+                // Hợp âm chiến thắng vui vẻ
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, i) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.type = 'sine';
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.value = freq;
+                    g.gain.setValueAtTime(0, audioCtx.currentTime + i*0.1);
+                    g.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + i*0.1 + 0.05);
+                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i*0.1 + 0.5);
+                    o.start(audioCtx.currentTime + i*0.1);
+                    o.stop(audioCtx.currentTime + i*0.1 + 0.5);
+                });
+            }
+        }
+
+        // --- CÁC HÀM ĐIỀU KHIỂN ---
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('play-screen').classList.remove('hidden');
+            document.getElementById('total-q-num').innerText = questions.length;
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            isAnswered = false;
+            const q = questions[currentIndex];
+            
+            // Cập nhật UI chung
+            document.getElementById('current-q-num').innerText = currentIndex + 1;
+            document.getElementById('progress-bar').style.width = `${((currentIndex) / questions.length) * 100}%`;
+            document.getElementById('question-text').innerHTML = q.question;
+            
+            const optionsContainer = document.getElementById('options-container');
+            const flashcardContainer = document.getElementById('flashcard-container');
+            const flashcard = document.getElementById('flashcard');
+            const feedbackBox = document.getElementById('feedback-box');
+            const nextBtn = document.getElementById('next-btn');
+            const checkBtn = document.getElementById('check-btn');
+
+            // Reset UI
+            optionsContainer.innerHTML = '';
+            optionsContainer.classList.remove('hidden');
+            flashcardContainer.classList.add('hidden');
+            flashcard.classList.remove('is-flipped');
+            feedbackBox.classList.add('hidden');
+            feedbackBox.className = "hidden text-center p-4 rounded-2xl mb-6 font-bold text-xl md:text-2xl border-4 pop-in";
+            nextBtn.classList.add('hidden');
+            checkBtn.classList.add('hidden');
+
+            if (q.type === 'mc') {
+                // Render Câu Trắc nghiệm
+                q.options.forEach((opt, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = "btn-bounce bg-white border-4 border-blue-200 text-left text-lg md:text-xl font-bold text-gray-700 p-4 rounded-2xl shadow-[0_4px_0_#bfdbfe] hover:bg-blue-50 transition-colors w-full";
+                    btn.innerHTML = opt;
+                    btn.onclick = () => selectMCAnswer(index, btn);
+                    optionsContainer.appendChild(btn);
+                });
+            } else if (q.type === 'input') {
+                // Hỗ trợ câu điền từ (nếu có bổ sung sau này)
+                const input = document.createElement('input');
+                input.type = "text";
+                input.id = "user-input";
+                input.className = "w-full p-4 text-xl border-4 border-blue-200 rounded-2xl font-bold focus:outline-none focus:border-blue-500 text-center";
+                input.placeholder = "Nhập câu trả lời của em...";
+                optionsContainer.appendChild(input);
+                checkBtn.classList.remove('hidden');
+            } else if (q.type === 'flashcard') {
+                // Render Flashcard
+                optionsContainer.classList.add('hidden');
+                flashcardContainer.classList.remove('hidden');
+                document.getElementById('flashcard-answer').innerHTML = q.answer;
+            }
+        }
+
+        function selectMCAnswer(selectedIndex, btnElement) {
+            if (isAnswered) return;
+            isAnswered = true;
+            
+            const q = questions[currentIndex];
+            const isCorrect = selectedIndex === q.correctIndex;
+            const buttons = document.getElementById('options-container').querySelectorAll('button');
+
+            // Vô hiệu hóa tất cả các nút
+            buttons.forEach(btn => btn.disabled = true);
+
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSound('correct');
+                score++;
+                document.getElementById('score-display').innerText = score;
+                btnElement.classList.replace('border-blue-200', 'border-green-500');
+                btnElement.classList.replace('shadow-[0_4px_0_#bfdbfe]', 'shadow-[0_4px_0_#22c55e]');
+                btnElement.classList.add('bg-green-100');
+                
+                feedbackBox.innerHTML = "🎉 Đúng rồi! Giỏi quá Muống ơi!";
+                feedbackBox.classList.add('bg-green-100', 'text-green-700', 'border-green-300');
+            } else {
+                playSound('wrong');
+                btnElement.classList.replace('border-blue-200', 'border-red-500');
+                btnElement.classList.replace('shadow-[0_4px_0_#bfdbfe]', 'shadow-[0_4px_0_#ef4444]');
+                btnElement.classList.add('bg-red-100');
+                
+                // Highlight đáp án đúng
+                buttons[q.correctIndex].classList.replace('border-blue-200', 'border-green-500');
+                buttons[q.correctIndex].classList.add('bg-green-100');
+
+                feedbackBox.innerHTML = `😢 Sai rồi, đáp án đúng là: <br><span class="text-blue-700">${q.options[q.correctIndex]}</span>`;
+                feedbackBox.classList.add('bg-red-100', 'text-red-700', 'border-red-300', 'shake');
+            }
+
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        // Logic chấm điểm câu nhập từ (nếu có)
+        function checkInputAnswer() {
+            if (isAnswered) return;
+            const q = questions[currentIndex];
+            const inputVal = document.getElementById('user-input').value.toLowerCase().trim();
+            const correctVal = q.correctText.toLowerCase().trim();
+            
+            isAnswered = true;
+            document.getElementById('user-input').disabled = true;
+            document.getElementById('check-btn').classList.add('hidden');
+            
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.remove('hidden');
+
+            if (inputVal === correctVal) {
+                playSound('correct');
+                score++;
+                document.getElementById('score-display').innerText = score;
+                feedbackBox.innerHTML = "🎉 Đúng rồi! Giỏi quá Muống ơi!";
+                feedbackBox.classList.add('bg-green-100', 'text-green-700', 'border-green-300');
+                document.getElementById('user-input').classList.add('border-green-500', 'bg-green-50');
+            } else {
+                playSound('wrong');
+                feedbackBox.innerHTML = `😢 Sai rồi, đáp án đúng là: <span class="text-blue-700">${q.correctText}</span>`;
+                feedbackBox.classList.add('bg-red-100', 'text-red-700', 'border-red-300', 'shake');
+                document.getElementById('user-input').classList.add('border-red-500', 'bg-red-50');
+            }
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function flipCard() {
+            if(isAnswered) return; // Chỉ tính lượt lật đầu tiên
+            isAnswered = true;
+            document.getElementById('flashcard').classList.add('is-flipped');
+            playSound('correct'); // Âm thanh nhẹ khi lật thẻ
+            
+            // Cho điểm mặc định vì là câu tự luận/thực hành, hoặc có thể coi như hoàn thành
+            score++; 
+            document.getElementById('score-display').innerText = score;
+
+            // Hiện nút đi tiếp sau 1 khoảng trễ nhỏ cho hiệu ứng lật hoàn thành
+            setTimeout(() => {
+                document.getElementById('next-btn').classList.remove('hidden');
+            }, 800);
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                renderQuestion();
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            playSound('win');
+            document.getElementById('play-screen').classList.add('hidden');
+            const endScreen = document.getElementById('end-screen');
+            endScreen.classList.remove('hidden');
+            endScreen.classList.add('pop-in');
+            document.getElementById('final-score').innerText = score;
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#fce18a', '#ff726d', '#b48def', '#f4306d', '#60a5fa', '#34d399'];
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                // Random thời gian và độ trễ rơi
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confetti.style.animationDelay = (Math.random() * 2) + 's';
+                document.body.appendChild(confetti);
+            }
+        }
+    </script>
+</body>
+</html>
